@@ -100,6 +100,7 @@ static CURLcode qs_disconnect(struct quicsocket *qs)
     qs->cfg = NULL;
   }
   if(qs->conn) {
+    (void)quiche_conn_close(qs->conn, TRUE, 0, NULL, 0);
     quiche_conn_free(qs->conn);
     qs->conn = NULL;
   }
