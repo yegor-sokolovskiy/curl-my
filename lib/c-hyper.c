@@ -488,6 +488,25 @@ static int uploadpostfields(void *userdata, hyper_context *ctx,
   return HYPER_POLL_READY;
 }
 
+static int uploadstreamed(void *userdata, hyper_context *ctx,
+                          hyper_buf **chunk)
+{
+  size_t fillcount;
+  struct Curl_easy *data = (struct Curl_easy *)userdata;
+  CURLcode result =
+    Curl_fillreadbuffer(data->conn, data->set.upload_buffer_size,
+                        &fillcount);
+  (void)ctx;
+  if(result)
+    return HYPER_POLL_ERROR;
+  if(!fillcount)
+    /* done! */
+    *chunk = NULL;
+  else
+    *chunk = hyper_buf_copy((uint8_t *)data->state.ulbuf, fillcount);
+  return HYPER_POLL_READY;
+}
+
 /*
  * bodysend() sets up headers in the outgoing request for a HTTP transfer that
  * sends a body
@@ -515,7 +534,16 @@ static CURLcode bodysend(struct Curl_easy *data,
 
     body = hyper_body_new();
     hyper_body_set_userdata(body, data);
-    hyper_body_set_data_func(body, uploadpostfields);
+    if(data->set.postfields)
+      hyper_body_set_data_func(body, uploadpostfields);
+    else {
+      result = Curl_get_upload_buffer(data);
+      if(result)
+        return result;
+      /* init the "upload from here" pointer */
+      data->req.upload_fromhere = data->state.ulbuf;
+      hyper_body_set_data_func(body, uploadstreamed);
+    }
     if(HYPERE_OK != hyper_request_set_body(hyperreq, body)) {
       /* fail */
       hyper_body_free(body);
