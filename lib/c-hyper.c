@@ -169,8 +169,25 @@ static int hyper_body_chunk(void *userdata, const hyper_buf *chunk)
   size_t len = hyper_buf_len(chunk);
   struct Curl_easy *data = (struct Curl_easy *)userdata;
   curl_write_callback writebody = data->set.fwrite_func;
+  struct SingleRequest *k = &data->req;
   size_t wrote;
 
+  if((0 == k->bodywrites++) && k->newurl) {
+#if 0
+    if(conn->bits.close) {
+      /* Abort after the headers if "follow Location" is set and we're set
+         to close anyway. */
+      return CURLE_OK;
+    }
+#endif
+    /* We have a new url to load, but since we want to be able
+       to re-use this connection properly, we read the full
+       response in "ignore more" */
+    k->ignorebody = TRUE;
+    infof(data, "Ignoring the response-body\n");
+  }
+  if(k->ignorebody)
+    return HYPER_ITER_CONTINUE;
   Curl_debug(data, CURLINFO_DATA_IN, buf, len);
   Curl_set_in_callback(data, true);
   wrote = writebody(buf, 1, len, data->set.out);
