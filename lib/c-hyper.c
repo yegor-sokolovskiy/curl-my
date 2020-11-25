@@ -221,6 +221,11 @@ static CURLcode status_line(struct Curl_easy *data,
   conn->httpversion =
     http_version == HYPER_HTTP_VERSION_1_1 ? 11 :
     (http_version == HYPER_HTTP_VERSION_2 ? 20 : 10);
+  data->req.httpcode = http_status;
+
+  result = Curl_http_statusline(data, conn);
+  if(result)
+    return result;
 
   Curl_dyn_reset(&data->state.headerb);
 
