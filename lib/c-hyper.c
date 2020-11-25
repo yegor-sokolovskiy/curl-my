@@ -639,6 +639,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
       return result;
   }
 
+  result = Curl_http_range(data, conn, httpreq);
+  if(result)
+    return result;
+
   result = Curl_http_useragent(data, conn);
   if(result)
     return result;
@@ -729,6 +733,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
 
   if(data->state.aptr.userpwd &&
      Curl_hyper_header(data, headers, data->state.aptr.userpwd))
+    goto error;
+
+  if((data->state.use_range && data->state.aptr.rangeline) &&
+     Curl_hyper_header(data, headers, data->state.aptr.rangeline))
     goto error;
 
   if(data->state.aptr.uagent &&

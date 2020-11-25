@@ -2655,6 +2655,63 @@ CURLcode Curl_http_cookies(struct Curl_easy *data,
 }
 #endif
 
+CURLcode Curl_http_range(struct Curl_easy *data,
+                         struct connectdata *conn,
+                         Curl_HttpReq httpreq)
+{
+  if(data->state.use_range) {
+    /*
+     * A range is selected. We use different headers whether we're downloading
+     * or uploading and we always let customized headers override our internal
+     * ones if any such are specified.
+     */
+    if(((httpreq == HTTPREQ_GET) || (httpreq == HTTPREQ_HEAD)) &&
+       !Curl_checkheaders(conn, "Range")) {
+      /* if a line like this was already allocated, free the previous one */
+      free(data->state.aptr.rangeline);
+      data->state.aptr.rangeline = aprintf("Range: bytes=%s\r\n",
+                                         data->state.range);
+    }
+    else if((httpreq == HTTPREQ_POST || httpreq == HTTPREQ_PUT) &&
+            !Curl_checkheaders(conn, "Content-Range")) {
+
+      /* if a line like this was already allocated, free the previous one */
+      free(data->state.aptr.rangeline);
+
+      if(data->set.set_resume_from < 0) {
+        /* Upload resume was asked for, but we don't know the size of the
+           remote part so we tell the server (and act accordingly) that we
+           upload the whole file (again) */
+        data->state.aptr.rangeline =
+          aprintf("Content-Range: bytes 0-%" CURL_FORMAT_CURL_OFF_T
+                  "/%" CURL_FORMAT_CURL_OFF_T "\r\n",
+                  data->state.infilesize - 1, data->state.infilesize);
+
+      }
+      else if(data->state.resume_from) {
+        /* This is because "resume" was selected */
+        curl_off_t total_expected_size =
+          data->state.resume_from + data->state.infilesize;
+        data->state.aptr.rangeline =
+          aprintf("Content-Range: bytes %s%" CURL_FORMAT_CURL_OFF_T
+                  "/%" CURL_FORMAT_CURL_OFF_T "\r\n",
+                  data->state.range, total_expected_size-1,
+                  total_expected_size);
+      }
+      else {
+        /* Range was selected and then we just pass the incoming range and
+           append total size */
+        data->state.aptr.rangeline =
+          aprintf("Content-Range: bytes %s/%" CURL_FORMAT_CURL_OFF_T "\r\n",
+                  data->state.range, data->state.infilesize);
+      }
+      if(!data->state.aptr.rangeline)
+        return CURLE_OUT_OF_MEMORY;
+    }
+  }
+  return CURLE_OK;
+}
+
 #ifndef USE_HYPER
 /*
  * Curl_http() gets called from the generic multi_do() function when a HTTP
@@ -2893,56 +2950,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
       /* we've passed, proceed as normal */
     }
   }
-  if(data->state.use_range) {
-    /*
-     * A range is selected. We use different headers whether we're downloading
-     * or uploading and we always let customized headers override our internal
-     * ones if any such are specified.
-     */
-    if(((httpreq == HTTPREQ_GET) || (httpreq == HTTPREQ_HEAD)) &&
-       !Curl_checkheaders(conn, "Range")) {
-      /* if a line like this was already allocated, free the previous one */
-      free(data->state.aptr.rangeline);
-      data->state.aptr.rangeline = aprintf("Range: bytes=%s\r\n",
-                                         data->state.range);
-    }
-    else if((httpreq == HTTPREQ_POST || httpreq == HTTPREQ_PUT) &&
-            !Curl_checkheaders(conn, "Content-Range")) {
 
-      /* if a line like this was already allocated, free the previous one */
-      free(data->state.aptr.rangeline);
-
-      if(data->set.set_resume_from < 0) {
-        /* Upload resume was asked for, but we don't know the size of the
-           remote part so we tell the server (and act accordingly) that we
-           upload the whole file (again) */
-        data->state.aptr.rangeline =
-          aprintf("Content-Range: bytes 0-%" CURL_FORMAT_CURL_OFF_T
-                  "/%" CURL_FORMAT_CURL_OFF_T "\r\n",
-                  data->state.infilesize - 1, data->state.infilesize);
-
-      }
-      else if(data->state.resume_from) {
-        /* This is because "resume" was selected */
-        curl_off_t total_expected_size =
-          data->state.resume_from + data->state.infilesize;
-        data->state.aptr.rangeline =
-          aprintf("Content-Range: bytes %s%" CURL_FORMAT_CURL_OFF_T
-                  "/%" CURL_FORMAT_CURL_OFF_T "\r\n",
-                  data->state.range, total_expected_size-1,
-                  total_expected_size);
-      }
-      else {
-        /* Range was selected and then we just pass the incoming range and
-           append total size */
-        data->state.aptr.rangeline =
-          aprintf("Content-Range: bytes %s/%" CURL_FORMAT_CURL_OFF_T "\r\n",
-                  data->state.range, data->state.infilesize);
-      }
-      if(!data->state.aptr.rangeline)
-        return CURLE_OUT_OF_MEMORY;
-    }
-  }
+  result = Curl_http_range(data, conn, httpreq);
+  if(result)
+    return result;
 
   httpstring = get_http_string(data, conn);
 
