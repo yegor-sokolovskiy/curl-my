@@ -159,7 +159,6 @@ static int hyper_each_header(void *userdata,
 
   data->info.header_size += (long)len;
   data->req.headerbytecount += (long)len;
-  data->req.bytecount += len;
   return HYPER_ITER_CONTINUE;
 }
 
@@ -193,10 +192,11 @@ static int hyper_body_chunk(void *userdata, const hyper_buf *chunk)
   wrote = writebody(buf, 1, len, data->set.out);
   Curl_set_in_callback(data, false);
 
-  if(wrote != Curl_dyn_len(&data->state.headerb))
+  if(wrote != len)
     return HYPER_ITER_ERROR;
 
   data->req.bytecount += len;
+  Curl_pgrsSetDownloadCounter(data, data->req.bytecount);
   return HYPER_ITER_CONTINUE;
 }
 
