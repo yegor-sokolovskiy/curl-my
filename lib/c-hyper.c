@@ -736,6 +736,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
      Curl_hyper_header(data, headers, data->state.aptr.host))
     goto error;
 
+  if(data->state.aptr.proxyuserpwd &&
+     Curl_hyper_header(data, headers, data->state.aptr.proxyuserpwd))
+    goto error;
+
   if(data->state.aptr.userpwd &&
      Curl_hyper_header(data, headers, data->state.aptr.userpwd))
     goto error;
