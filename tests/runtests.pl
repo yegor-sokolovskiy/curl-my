@@ -3345,7 +3345,9 @@ sub subNewlines {
     # little quirk.
 
     if(($$thing =~ /^HTTP\/(1.1|1.0|2) [1-5][^\x0d]*\z/) ||
-       ($$thing =~ /^[a-z0-9_-]+: [^\x0d]*\z/i)) {
+       (($$thing =~ /^[a-z0-9_-]+: [^\x0d]*\z/i) &&
+        # skip curl error messages
+        ($$thing !~ /^curl: \(\d+\) /))) {
         # enforce CRLF newline
         $$thing =~ s/\x0a/\x0d\x0a/;
         $prevupdate = 1;
