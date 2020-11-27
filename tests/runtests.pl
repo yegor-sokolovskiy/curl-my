@@ -3582,15 +3582,41 @@ sub singletest {
     my $otest = "log/test$testnum";
     open(D, ">$otest");
     my $diff;
+    my $show = 1;
     for my $s (@entiretest) {
         my $f = $s;
-        subVariables(\$s, "%");
-        subBase64(\$s);
-        subNewlines(\$s) if($has_hyper);
-        if($f ne $s) {
+        if($s =~ /^ *%if (.*)/) {
+            my $cond = $1;
+            my $rev = 0;
+
+            if($cond =~ /^!(.*)/) {
+                $cond = $1;
+                $rev = 1;
+            }
+            $rev ^= $feature{$cond};
+            $show = $rev;
+            next;
+        }
+        elsif($s =~ /^ *%else/) {
+            $show ^= 1;
+            next;
+        }
+        elsif($s =~ /^ *%endif/) {
+            $show = 1;
+            next;
+        }
+        if($show) {
+            subVariables(\$s, "%");
+            subBase64(\$s);
+            subNewlines(\$s) if($has_hyper);
+            if($f ne $s) {
+                $diff++;
+            }
+            print D $s;
+        }
+        else {
             $diff++;
         }
-        print D $s;
     }
     close(D);
 
