@@ -2763,6 +2763,7 @@ sub compare {
 }
 
 sub setupfeatures {
+    $feature{"hyper"} = $has_hyper;
     $feature{"c-ares"} = $has_cares;
     $feature{"alt-svc"} = $has_altsvc;
     $feature{"HSTS"} = $has_hsts;
