@@ -347,11 +347,10 @@ static CURLcode hyperstream(struct Curl_easy *data,
     reasonp = hyper_response_reason_phrase(resp);
     reason_len = hyper_response_reason_phrase_len(resp);
 
-    if(status_line(data, conn,
-                   http_status, http_version, reasonp, reason_len)) {
-      failf(data, "hyperstream: couldn't get status code\n");
-      return CURLE_RECV_ERROR;
-    }
+    result = status_line(data, conn,
+                         http_status, http_version, reasonp, reason_len);
+    if(result)
+      return result;
 
     headers = hyper_response_headers(resp);
     if(!headers) {
