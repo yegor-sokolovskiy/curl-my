@@ -90,6 +90,10 @@
 #include <openssl/engine.h>
 #endif
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) /* 1.1.0 or later */
+#define CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG
+#endif
+
 #include "warnless.h"
 #include "non-ascii.h" /* for Curl_convert_from_utf8 prototype */
 
