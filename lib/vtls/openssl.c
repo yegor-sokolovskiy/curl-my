@@ -90,7 +90,7 @@
 #include <openssl/engine.h>
 #endif
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) /* 1.1.0 or later */
+#if (OPENSSL_VERSION_NUMBER >= 0x10101000L) /* 1.1.1 or later */
 #define CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG
 #endif
 
