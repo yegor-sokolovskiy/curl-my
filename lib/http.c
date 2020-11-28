@@ -3064,11 +3064,13 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
        (httpreq == HTTPREQ_HEAD))
       Curl_pgrsSetUploadSize(data, 0); /* nothing */
 
+    /* bodysend takes ownership of the 'req' memory on success */
     result = Curl_http_bodysend(data, conn, &req, httpreq);
   }
-  Curl_dyn_free(&req);
-  if(result)
+  if(result) {
+    Curl_dyn_free(&req);
     return result;
+  }
 
   if(!http->postsize && (http->sending != HTTPSEND_REQUEST))
     data->req.upload_done = TRUE;
@@ -3080,7 +3082,7 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
     if(Curl_pgrsUpdate(conn))
       result = CURLE_ABORTED_BY_CALLBACK;
 
-    if(data->req.writebytecount >= http->postsize) {
+    if(!http->postsize) {
       /* already sent the entire request body, mark the "upload" as
          complete */
       infof(data, "upload completely sent off: %" CURL_FORMAT_CURL_OFF_T
