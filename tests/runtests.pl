@@ -262,7 +262,7 @@ my $has_multissl;   # set if build with MultiSSL support
 my $has_manual;     # set if built with built-in manual
 my $has_win32;      # set if built for Windows
 my $has_mingw;      # set if built with MinGW (as opposed to MinGW-w64)
-my $has_hyper;      # set if built with Hyper
+my $has_hyper = 0;  # set if built with Hyper
 
 # this version is decided by the particular nghttp2 library that is being used
 my $h2cver = "h2c";
