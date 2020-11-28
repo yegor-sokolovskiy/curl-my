@@ -2165,6 +2165,8 @@ CURLcode Curl_http_target(struct Curl_easy *data,
   }
 
   else
+#else
+    (void)conn; /* not used in disabled-proxy builds */
 #endif
   {
     result = Curl_dyn_add(r, path);
