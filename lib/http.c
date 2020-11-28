@@ -2963,12 +2963,12 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
   /* add the main request stuff */
   /* GET/HEAD/POST/PUT */
   result = Curl_dyn_addf(&req, "%s ", request);
-  if(result)
+  if(!result)
+    result = Curl_http_target(data, conn, &req);
+  if(result) {
+    Curl_dyn_free(&req);
     return result;
-
-  result = Curl_http_target(data, conn, &req);
-  if(result)
-    return result;
+  }
 
 #ifndef CURL_DISABLE_ALTSVC
   if(conn->bits.altused && !Curl_checkheaders(conn, "Alt-Used")) {
@@ -3033,8 +3033,10 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
   Curl_safefree(data->state.aptr.proxyuserpwd);
   free(altused);
 
-  if(result)
+  if(result) {
+    Curl_dyn_free(&req);
     return result;
+  }
 
   if(!(conn->handler->flags&PROTOPT_SSL) &&
      conn->httpversion != 20 &&
@@ -3042,28 +3044,27 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
     /* append HTTP2 upgrade magic stuff to the HTTP request if it isn't done
        over SSL */
     result = Curl_http2_request_upgrade(&req, conn);
-    if(result)
+    if(result) {
+      Curl_dyn_free(&req);
       return result;
+    }
   }
 
   result = Curl_http_cookies(data, conn, &req);
-  if(result)
-    return result;
+  if(!result)
+    result = Curl_add_timecondition(conn, &req);
+  if(!result)
+    result = Curl_add_custom_headers(conn, FALSE, &req);
 
-  result = Curl_add_timecondition(conn, &req);
-  if(result)
-    return result;
+  if(!result) {
+    http->postdata = NULL;  /* nothing to post at this point */
+    if((httpreq == HTTPREQ_GET) ||
+       (httpreq == HTTPREQ_HEAD))
+      Curl_pgrsSetUploadSize(data, 0); /* nothing */
 
-  result = Curl_add_custom_headers(conn, FALSE, &req);
-  if(result)
-    return result;
-
-  http->postdata = NULL;  /* nothing to post at this point */
-  if((httpreq == HTTPREQ_GET) ||
-     (httpreq == HTTPREQ_HEAD))
-    Curl_pgrsSetUploadSize(data, 0); /* nothing */
-
-  result = Curl_http_bodysend(data, conn, &req, httpreq);
+    result = Curl_http_bodysend(data, conn, &req, httpreq);
+  }
+  Curl_dyn_free(&req);
   if(result)
     return result;
 
