@@ -4,9 +4,8 @@ properties([buildDiscarder(logRotator(daysToKeepStr: '7', numToKeepStr: '5'))])
 
 node {
     stage ('Stage 1 Checkout Repository') {
-        deleteDir()
-        //git 'https://github.com/yegor-sokolovskiy/curl-my.git'
-        checkout scm
+        //deleteDir()
+        git 'https://github.com/yegor-sokolovskiy/curl-my.git'
         sh 'ls -l'
     }
     stage ('Stage 2 Prebuild') {
@@ -34,11 +33,12 @@ node {
     }
     stage ('Stage 5 Prepare Artifacts') {
         sh '''#!/usr/bin/env bash
-            OUT_DIR="/out/root"
-            OUT_FULL_DIR=$${WORKSPACE}${OUT_DIR}
+            OUT_DIR="/out"
+            ARTIFACTS_DIR="root"
+            OUT_FULL_DIR=${WORKSPACE}${OUT_DIR}/${ARTIFACTS_DIR}
             mkdir -p $OUT_FULL_DIR
             make install exec_prefix=$OUT_FULL_DIR prefix=$OUT_FULL_DIR
-            tar -zcvf artifacts.tar.gz ${OUT_FULL_DIR}/
+            tar -zcvf ${WORKSPACE}/artifacts.tar.gz -C ${WORKSPACE}${OUT_DIR}/ ${ARTIFACTS_DIR}
         '''
         archiveArtifacts artifacts: '**/artifacts.tar.gz'
     }
