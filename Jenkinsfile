@@ -3,7 +3,7 @@
 properties([buildDiscarder(logRotator(daysToKeepStr: '7', numToKeepStr: '5'))])
 
 node {
-    docker.image('goshazzz/slave-jenkins') {
+    docker.image('goshazzz/slave-jenkins').inside {
         stage ('Stage 1 Checkout Repository') {
             //deleteDir()
             git 'https://github.com/yegor-sokolovskiy/curl-my.git'
